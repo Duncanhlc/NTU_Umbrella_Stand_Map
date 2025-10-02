@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>臺大傘架地圖</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map { height: 600px; }
+        body { font-family: Arial, sans-serif; }
+        .popup-name { font-size: 1.5em; font-weight: bold; }
+        #filters { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border: 1px solid #ccc; 
+            background: #f9f9f9; 
+            display: flex; 
+            justify-content: space-between; 
+            flex-wrap: wrap; 
+        }
+        #filters h3 { margin-top: 0; }
+        #filters label { display: block; margin-bottom: 5px; }
+        #filters > div { 
+            flex: 1; 
+            min-width: 150px; 
+            margin-right: 20px; 
+        }
+        #filters > div:last-child { margin-right: 0; }
+        #filters button { 
+            align-self: flex-end; 
+            margin-top: 10px; 
+        }
+
+        .popup-image { 
+            width: 50%; 
+            height: auto; 
+            display: block; 
+        }
+    </style>
+</head>
+<body>
+    <h1>臺大傘架地圖</h1>
+    <div id="filters">
+        <div>
+            <h4>遮蓋性</h4>
+            <label><input type="checkbox" class="filter" data-type="shelter" value="完全遮蓋"> 完全遮蓋</label>
+            <label><input type="checkbox" class="filter" data-type="shelter" value="部分遮蓋"> 部分遮蓋</label>
+            <label><input type="checkbox" class="filter" data-type="shelter" value="無遮蓋"> 無遮蓋</label>
+        </div>
+        <div>
+            <h4>安全性</h4>
+            <label><input type="checkbox" class="filter" data-type="security" value="監視器"> 監視器</label>
+            <label><input type="checkbox" class="filter" data-type="security" value="可上鎖"> 可上鎖</label>
+            <label><input type="checkbox" class="filter" data-type="security" value="保全"> 保全</label>
+            <label><input type="checkbox" class="filter" data-type="security" value="無安全功能"> 無安全功能</label>
+        </div>
+        <div>
+            <h4>容量範圍</h4>
+            <input type="range" id="capacity-range" min="0" max="300" value="0"> 
+            <span id="range-value">0-300</span>
+        </div>
+        <div>
+            <h4>排水性</h4>
+            <label><input type="checkbox" class="filter" data-type="drainage" value="有排水設計"> 有排水設計</label>
+            <label><input type="checkbox" class="filter" data-type="drainage" value="無排水設計"> 無排水設計</label>
+        </div>
+        <div>
+            <h4>材質</h4>
+            <label><input type="checkbox" class="filter" data-type="material" value="金屬"> 金屬</label>
+            <label><input type="checkbox" class="filter" data-type="material" value="塑膠"> 塑膠</label>
+            <label><input type="checkbox" class="filter" data-type="material" value="木材"> 木材</label>
+        </div>
+        <button id="apply-filters">套用篩選</button>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([25.016, 121.539], 16);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        var locations = [
+            {
+                lat: 25.014793,
+                lon: 121.538825,
+                identifier: "S45-1F-001",
+                name: "大氣科學館1F大門外左前方40格傘架",
+                location: "大氣科學館1F大門外左前方",
+                capacity: "40",
+                shelter: "部分遮蓋",
+                dimension: "63x38x63",
+                security: "監視器",
+                material: "金屬",
+                drainage: "有排水設計（底部金屬托盤）",
+                administration: "大氣科學系",
+                author: "許立知",
+                date: "2025/09/28"
+            },
+            {
+                lat: 25.014494,
+                lon: 121.538033,
+                identifier: "S24-1F-002",
+                name: "禮賢樓1F7eleven大門外左前方18格傘架",
+                location: "禮賢樓1F7eleven大門外左前方",
+                capacity: "18",
+                shelter: "完全遮蓋",
+                dimension: "61x34x50",
+                security: "監視器",
+                material: "金屬、塑膠",
+                drainage: "有排水設計（底部塑膠托盤）",
+                administration: "統一超商股份有限公司",
+                author: "許立知",
+                date: "2025/09/28"
+            },
+            {
+                lat: 25.014686,
+                lon: 121.538369,
+                identifier: "S43-1F-003",
+                name: "浩瀚樓1F華南銀行大門外左前方20格傘架",
+                location: "浩瀚樓1F華南銀行大門外左前方",
+                capacity: "20",
+                shelter: "部分遮蓋",
+                dimension: "38x38x68",
+                security: "監視器",
+                material: "金屬",
+                drainage: "有排水設計（底部金屬托盤）",
+                administration: "華南商業銀行股份有限公司",
+                author: "許立知",
+                date: "2025/09/28"
+            },
+            {
+                lat: 25.017303,
+                lon: 121.540533,
+                identifier: "M12-1F-004",
+                name: "總圖書館1F入口外右後方220+格傘架",
+                location: "總圖書館1F入口外右後方",
+                capacity: "220+",
+                shelter: "部分遮蓋",
+                dimension: "90x61x127",
+                security: "監視器",
+                material: "金屬",
+                drainage: "有排水設計（底部金屬托盤）",
+                administration: "圖書館",
+                author: "許立知",
+                date: "2025/09/28"
+            },
+            {
+                lat: 25.017724,
+                lon: 121.540164,
+                identifier: "M11-1F-005",
+                name: "第一學生活動中心1F南側大門外右前方60+格傘架",
+                location: "第一學生活動中心1F南側大門外右前方",
+                capacity: "60+",
+                shelter: "部分遮蓋",
+                dimension: "134x34x98",
+                security: "監視器、保全",
+                material: "金屬、塑膠",
+                drainage: "有排水設計（底部金屬托盤）",
+                administration: "校務處",
+                author: "許立知",
+                date: "2025/09/28"
+            },
+            {
+                lat: 25.016411,
+                lon: 121.536774,
+                identifier: "M50-1F-006",
+                name: "行政大樓1F正門外右前方14+格傘架",
+                location: "行政大樓1F正門外右前方",
+                capacity: "14+",
+                shelter: "部分遮蓋",
+                dimension: "48×21×43",
+                security: "無安全功能",
+                material: "金屬",
+                drainage: "無排水設計",
+                administration: "N/A",
+                author: "曾柏暟",
+                date: "2025/10/01"
+            },
+            {
+                lat: 25.015561,
+                lon: 121.538602,
+                identifier: "S41-1F-007",
+                name: "大學入學考試中心1F正門外右前方21格傘架",
+                location: "大學入學考試中心1F正門外右前方",
+                capacity: "21",
+                shelter: "部分遮蓋",
+                dimension: "70×33×50",
+                security: "保全",
+                material: "金屬",
+                drainage: "有排水設計（底部金屬托盤）",
+                administration: "財團法人大學入學考試中心基金會",
+                author: "曾柏暟",
+                date: "2025/10/01"
+            },
+            {
+                lat: 25.020785,
+                lon: 121.542446,
+                identifier: "E11-1F-008",
+                name: "社會科學院辜振甫紀念圖書館1F大門外280格傘架",
+                location: "社會科學院辜振甫紀念圖書館1F大門外",
+                capacity: "280",
+                shelter: "部分遮蓋",
+                dimension: "453×38×67",
+                security: "無安全功能",
+                material: "金屬",
+                drainage: "有排水設計（底部金屬托盤）",
+                administration: "N/A",
+                author: "曾柏暟",
+                date: "2025/10/01"
+            },
+            {
+                lat: 25.020448,
+                lon: 121.540404,
+                identifier: "N73-1F-009",
+                name: "外語教學暨資源中心1F室內39格傘架",
+                location: "外語教學暨資源中心1F室內",
+                capacity: "39",
+                shelter: "完全遮蓋",
+                dimension: "304×45×92",
+                security: "監視器",
+                material: "金屬、木材",
+                drainage: "有排水設計（底部金屬托盤）",
+                administration: "外語教學暨資源中心",
+                author: "曾柏暟",
+                date: "2025/10/01"
+            },
+            {
+                lat: 25.012987,
+                lon: 121.536584,
+                identifier: "S10-1F-010",
+                name: "第二學生活動中心1F全家門外右前方18格傘架",
+                location: "第二學生活動中心1F全家門外右前方",
+                capacity: "18",
+                shelter: "完全遮蓋",
+                dimension: "60×32×48",
+                security: "無安全功能",
+                material: "金屬、塑膠",
+                drainage: "有排水設計（底部金屬托盤）",
+                administration: "全家便利商店股份有限公司",
+                author: "曾柏暟",
+                date: "2025/10/01"
+            }
+        ];
+
+        var markers = [];
+
+        locations.forEach(function(loc) {
+            var marker = L.marker([loc.lat, loc.lon]);
+            var popupContent = `
+                <div class="popup-name">${loc.name}</div>
+                <b></b><br>
+                <img src="${loc.name}.jpg" class="popup-image"><br>
+                <b>識別碼:</b> ${loc.identifier}<br>
+                <b>位置:</b> ${loc.location}<br>
+                <b>容量:</b> ${loc.capacity}<br>
+                <b>遮蓋性:</b> ${loc.shelter}<br>
+                <b>尺寸:</b> ${loc.dimension}<br>
+                <b>安全性:</b> ${loc.security}<br>
+                <b>材質:</b> ${loc.material}<br>
+                <b>排水性:</b> ${loc.drainage}<br>
+                <b>管理單位:</b> ${loc.administration}<br>
+                <b>著錄者:</b> ${loc.author}<br>
+                <b>著錄日期:</b> ${loc.date}
+            `;
+            marker.bindPopup(popupContent);
+            markers.push(marker); 
+            marker.loc = loc;
+        });
+
+        var rangeSlider = document.getElementById('capacity-range');
+        var rangeValue = document.getElementById('range-value');
+        rangeSlider.addEventListener('input', function() {
+            rangeValue.textContent = `${this.value}-300`;
+        });
+
+        document.getElementById('apply-filters').addEventListener('click', applyFilters);
+
+        function applyFilters() {
+            var selectedShelters = getSelectedValues('shelter');
+            var selectedSecurities = getSelectedValues('security');
+            var selectedDrainages = getSelectedValues('drainage');
+            var selectedMaterials = getSelectedValues('material');
+            var minCap = parseInt(document.getElementById('capacity-range').value);
+            var maxCap = 300;
+
+            if (selectedShelters.length === 0 && selectedSecurities.length === 0 && 
+                selectedDrainages.length === 0 && selectedMaterials.length === 0 && minCap === 0) {
+                markers.forEach(function(marker) {
+                    marker.addTo(map);
+                });
+                return;
+            }
+
+            markers.forEach(function(marker) {
+                var loc = marker.loc;
+                var capacityNum = parseCapacity(loc.capacity);
+
+                var matchesShelter = selectedShelters.length === 0 || selectedShelters.includes(loc.shelter);
+                var matchesSecurity = selectedSecurities.length === 0 || selectedSecurities.some(function(s) {
+                    return loc.security.includes(s);
+                });
+                var matchesDrainage = selectedDrainages.length === 0 || selectedDrainages.some(function(d) {
+                    return loc.drainage.startsWith(d);
+                });
+                var matchesMaterial = selectedMaterials.length === 0 || selectedMaterials.some(function(m) {
+                    return loc.material.includes(m);
+                });
+                var matchesCapacity = capacityNum >= minCap && capacityNum <= maxCap;
+
+                if (matchesShelter && matchesSecurity && matchesCapacity && matchesDrainage && matchesMaterial) {
+                    marker.addTo(map);
+                } else {
+                    map.removeLayer(marker);
+                }
+            });
+        }
+
+        function getSelectedValues(type) {
+            var checkboxes = document.querySelectorAll(`.filter[data-type="${type}"]:checked`);
+            return Array.from(checkboxes).map(function(cb) { return cb.value; });
+        }
+
+        function parseCapacity(cap) {
+            var num = parseInt(cap.replace(/[^0-9]/g, ''), 10);
+            return isNaN(num) ? 0 : num;
+        }
+
+        applyFilters();
+    </script>
+</body>
+</html>
